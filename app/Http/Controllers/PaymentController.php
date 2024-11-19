@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class PaymentController extends Controller
+{
+    public function payment(){
+        return view('payment');
+    }
+
+
+    public function verify_payment(Request $request , $transaction_id){
+        $request->session()->put('transaction_id', $transaction_id);
+        return redirect('/complete_payment');
+    }
+
+    public function complete_payment(Request $request){
+        if($request->session()->has('transaction_id') && $request->session()->has('order_id')){
+            $order_id = $request->session()->get('order_id');
+            $transaction_id = $request->session()->get('transaction_id');
+            $order_status = 'paid';
+            $payment_date = date('Y-m-d H:i:s');
+            // Update order status in the database
+            $affected = DB::table('orders')->where('id', $order_id)->update([
+                'status'=> $order_status
+            ]);
+
+            // store payment info in the database
+
+            DB::table('payment')->insert([
+                'order_id' => $order_id,
+                'transaction_id' => $transaction_id,
+                'date' => $payment_date
+            ]);
+
+            // remove everything from the session
+
+            $request->session()->flush();
+            return redirect('/thank_you')->with('order_id', $order_id);
+
+        }else{
+           return redirect('/');
+        }
+
+
+    }
+
+    public function Thank_you(){
+        return view('thank_you');
+    }
+}
